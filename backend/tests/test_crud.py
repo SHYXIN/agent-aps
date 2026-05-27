@@ -1,21 +1,7 @@
 """Rule CRUD 操作测试"""
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.database import Base
-from app.crud import RuleCRUD
-from app.schemas import RuleCreate
-
-
-@pytest.fixture
-def db_session():
-    """每个测试用独立的内存数据库"""
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    yield session
-    session.close()
+from app.services.crud import RuleCRUD
+from app.schemas.rule import RuleCreate
 
 
 @pytest.fixture

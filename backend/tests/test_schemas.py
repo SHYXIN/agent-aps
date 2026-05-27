@@ -1,7 +1,7 @@
-"""Rule Schema 验证测试"""
+"""Schema 验证测试"""
 import pytest
 from pydantic import ValidationError
-from app.schemas import RuleCreate
+from app.schemas.rule import RuleCreate, RuleUpdate, RuleResponse, Condition, Action
 
 
 class TestRuleSchema:
@@ -54,7 +54,7 @@ class TestRuleSchema:
             RuleCreate(
                 name="test",
                 rule_type="data_cleaning",
-                condition={"field": "x"},  # 缺少 operator 和 value
+                condition={"field": "x"},
                 action={"field": "y", "operator": "set", "value": 2},
             )
 
@@ -88,3 +88,78 @@ class TestRuleSchema:
             action={"field": "y", "operator": "set", "value": 2},
         )
         assert rule.notes is None
+
+
+class TestRuleUpdate:
+    """测试 RuleUpdate schema"""
+
+    def test_all_fields_optional(self):
+        """RuleUpdate 所有字段都是可选的"""
+        update = RuleUpdate()
+        assert update.name is None
+        assert update.status is None
+
+    def test_partial_update(self):
+        """可以只更新部分字段"""
+        update = RuleUpdate(name="新名称")
+        assert update.name == "新名称"
+        assert update.status is None
+
+    def test_status_validation(self):
+        """status 只能是 active 或 disabled"""
+        update = RuleUpdate(status="active")
+        assert update.status == "active"
+        update = RuleUpdate(status="disabled")
+        assert update.status == "disabled"
+
+    def test_invalid_status(self):
+        """无效的 status 值"""
+        with pytest.raises(ValidationError):
+            RuleUpdate(status="invalid")
+
+
+class TestRuleResponse:
+    """测试 RuleResponse schema"""
+
+    def test_from_orm(self):
+        """可以从 ORM 对象创建 Response"""
+        from datetime import datetime, timezone
+        class FakeRule:
+            id = 1
+            name = "测试规则"
+            description = "测试"
+            rule_type = "data_cleaning"
+            condition_json = '{"field": "x"}'
+            action_json = '{"field": "y"}'
+            free_text = None
+            status = "active"
+            source = "manual"
+            notes = None
+            created_at = datetime(2026, 5, 27, tzinfo=timezone.utc)
+            updated_at = datetime(2026, 5, 27, tzinfo=timezone.utc)
+
+        resp = RuleResponse.model_validate(FakeRule())
+        assert resp.id == 1
+        assert resp.name == "测试规则"
+        assert resp.status == "active"
+
+    def test_serialization(self):
+        """可以序列化为 JSON"""
+        from datetime import datetime, timezone
+        resp = RuleResponse(
+            id=1,
+            name="测试规则",
+            description=None,
+            rule_type="data_cleaning",
+            condition_json="{}",
+            action_json="{}",
+            free_text=None,
+            status="active",
+            source="manual",
+            notes=None,
+            created_at=datetime(2026, 5, 27, tzinfo=timezone.utc),
+            updated_at=datetime(2026, 5, 27, tzinfo=timezone.utc),
+        )
+        data = resp.model_dump()
+        assert data["id"] == 1
+        assert data["name"] == "测试规则"

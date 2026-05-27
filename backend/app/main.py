@@ -1,55 +1,51 @@
 """FastAPI 应用入口"""
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.database import Base, engine, get_db
-from app.schemas import RuleCreate
-from app.crud import RuleCRUD
+from fastapi import FastAPI
+from starlette.middleware.sessions import SessionMiddleware
 
-app = FastAPI(title="Agent APS Rule Manager")
+from app.database import engine, Base as DBase
+from app.models.user import User  # noqa: F401 — 注册模型
+from app.core.config import ADMIN_SECRET_KEY, ADMIN_DEFAULT_USERNAME, ADMIN_DEFAULT_PASSWORD
+from app.core.security import hash_password
 
+app = FastAPI(title="Agent APS Rule Manager", on_startup=[])
 
-@app.on_event("startup")
-def on_startup():
-    Base.metadata.create_all(bind=engine)
-
-
-@app.post("/api/rules", status_code=201)
-def create_rule(rule: RuleCreate, db: Session = Depends(get_db)):
-    crud = RuleCRUD(db)
-    return crud.create(rule)
-
-
-@app.get("/api/rules")
-def list_rules(
-    rule_type: str | None = None,
-    status: str | None = None,
-    db: Session = Depends(get_db),
-):
-    crud = RuleCRUD(db)
-    return crud.list_all(rule_type=rule_type, status=status)
+# Session 中间件（Admin 认证依赖）
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=ADMIN_SECRET_KEY,
+    session_cookie="admin_session",
+    max_age=3600,
+)
 
 
-@app.get("/api/rules/{rule_id}")
-def get_rule(rule_id: int, db: Session = Depends(get_db)):
-    crud = RuleCRUD(db)
-    rule = crud.get_by_id(rule_id)
-    if rule is None:
-        raise HTTPException(status_code=404, detail="Rule not found")
-    return rule
+def _create_default_admin():
+    """首次启动时创建默认管理员账号"""
+    from sqlalchemy.orm import sessionmaker
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
+    try:
+        existing = db.query(User).filter(User.username == ADMIN_DEFAULT_USERNAME).first()
+        if not existing:
+            admin = User(
+                username=ADMIN_DEFAULT_USERNAME,
+                password_hash=hash_password(ADMIN_DEFAULT_PASSWORD),
+                role="admin",
+                is_active=True,
+            )
+            db.add(admin)
+            db.commit()
+            print(f"[Admin] 默认管理员已创建: {ADMIN_DEFAULT_USERNAME} / {ADMIN_DEFAULT_PASSWORD}")
+    finally:
+        db.close()
 
 
-@app.put("/api/rules/{rule_id}")
-def update_rule(rule_id: int, data: dict, db: Session = Depends(get_db)):
-    crud = RuleCRUD(db)
-    rule = crud.update(rule_id, data)
-    if rule is None:
-        raise HTTPException(status_code=404, detail="Rule not found")
-    return rule
+_create_default_admin()
 
+# 注册 API 路由
+from app.api.routes import register_routes
+register_routes(app)
 
-@app.delete("/api/rules/{rule_id}")
-def delete_rule(rule_id: int, db: Session = Depends(get_db)):
-    crud = RuleCRUD(db)
-    if not crud.delete(rule_id):
-        raise HTTPException(status_code=404, detail="Rule not found")
-    return {"ok": True}
+# 挂载 Starlette-Admin 管理后台
+from app.admin import create_admin
+
+admin = create_admin(app)
