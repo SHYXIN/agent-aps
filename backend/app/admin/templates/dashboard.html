@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+
+{% block header %}
+<div class="page-header">
+    <div class="container-xl">
+        <h2 class="page-title">仪表盘</h2>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-sm-6 col-lg-4">
+                <div class="card card-sm">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <span class="bg-blue text-white avatar">
+                                    <i class="fa fa-list"></i>
+                                </span>
+                            </div>
+                            <div class="col">
+                                <div class="font-weight-medium">{{ stats.rule_count }}</div>
+                                <div class="text-muted">规则总数</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="card card-sm">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <span class="bg-green text-white avatar">
+                                    <i class="fa fa-check-circle"></i>
+                                </span>
+                            </div>
+                            <div class="col">
+                                <div class="font-weight-medium">{{ stats.active_rule_count }}</div>
+                                <div class="text-muted">启用规则</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="card card-sm">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <span class="bg-purple text-white avatar">
+                                    <i class="fa fa-users"></i>
+                                </span>
+                            </div>
+                            <div class="col">
+                                <div class="font-weight-medium">{{ stats.user_count }}</div>
+                                <div class="text-muted">用户数</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

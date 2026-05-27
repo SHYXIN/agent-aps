@@ -3,7 +3,7 @@ import json
 from typing import Optional
 from sqlalchemy.orm import Session
 from app.models import Rule
-from app.schemas import RuleCreate
+from app.schemas.rule import RuleCreate
 
 
 class RuleCRUD:
