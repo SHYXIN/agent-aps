@@ -124,9 +124,11 @@ def register_agent_routes(app):
                 "clarification_question": question,
             }
 
+        # needs_llm 分支已废弃（parse_user_input 内部已调用 LLM）
+        # 保留作为兜底
         if result.get("needs_llm"):
             return {
-                "reply": "抱歉，当前版本暂不支持复杂语义解析。请尝试更明确的描述，如：含硼钢炉容打八折。",
+                "reply": "抱歉，无法解析您的描述。请尝试更明确的描述，如：含硼钢炉容打八折。",
                 "pending_rule": None,
                 "needs_confirmation": False,
                 "needs_clarification": False,

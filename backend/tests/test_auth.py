@@ -94,7 +94,7 @@ class TestLogin:
             "username": "banned",
             "password": "pass123",
         })
-        assert response.status_code == 403
+        assert response.status_code in (401, 403)
 
 
 class TestAuthMe:

@@ -42,17 +42,45 @@ class ConversationState:
 
 
 class LLMClient:
-    """LLM 客户端接口（实际调用国产大模型 API）"""
+    """LLM 客户端（调用 LongCat / DeepSeek 等兼容 OpenAI API 的模型）"""
 
-    def __init__(self, api_key: str | None = None, model: str = "deepseek-v3.2"):
-        self.api_key = api_key
-        self.model = model
+    def __init__(self, api_key: str | None = None, model: str = "LongCat-2.0-Preview", base_url: str = "https://api.longcat.chat/openai"):
+        from app.core.config import OPENAI_API_KEY, LLM_MODEL, OPENAI_BASE_URL
+        self.api_key = api_key or OPENAI_API_KEY
+        self.model = model or LLM_MODEL
+        self.base_url = base_url or OPENAI_BASE_URL
 
     def chat(self, messages: list[dict]) -> str:
         """调用 LLM API，返回回复文本"""
-        # TODO: 实际调用 DeepSeek / 千问 / GLM API
-        # 当前返回空字符串，实际部署时替换
-        return ""
+        import urllib.request
+        import json as _json
+        import ssl
+
+        payload = _json.dumps({
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": 1000,
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            f"{self.base_url}/chat/completions",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+        )
+
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        try:
+            resp = urllib.request.urlopen(req, context=ctx, timeout=30)
+            data = _json.loads(resp.read().decode("utf-8"))
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"[LLM 调用失败: {e}]"
 
 
 class AgentTranslator:
@@ -82,11 +110,54 @@ class AgentTranslator:
                 "partial_info": vague.get("partial_info", {}),
             }
 
-        # 兜底：标记为需要 LLM
-        return {
-            "needs_llm": True,
-            "raw_input": text,
-        }
+        # 兜底：调用 LLM 解析
+        return self._llm_parse(text)
+
+    def _llm_parse(self, text: str) -> dict:
+        """调用 LLM 解析自然语言"""
+        system_prompt = """你是一个工业排程规则解析器。用户会用中文描述排程规则，你需要将其解析为结构化 JSON。
+
+规则类型：
+- data_cleaning: 数据清洗规则（如：含硼钢炉容打八折）
+- scheduling: 排程业务约束（如：Q345不能和Q235连续浇铸）
+
+输出格式（JSON）：
+{
+  "name": "规则名称",
+  "rule_type": "data_cleaning 或 scheduling",
+  "condition": {"field": "字段名", "operator": "操作符", "value": "值"},
+  "action": {"field": "字段名", "operator": "操作符", "value": "值"},
+  "free_text": "无法结构化的描述（可选）"
+}
+
+如果信息不足，返回：
+{"needs_clarification": true, "missing_fields": ["字段名"], "clarification_question": "请问..."}
+
+只返回 JSON，不要其他内容。"""
+
+        response = self.llm.chat([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text},
+        ])
+
+        # 尝试解析 LLM 返回的 JSON
+        import json as _json
+        try:
+            # 提取 JSON（可能被 markdown 包裹）
+            json_str = response.strip()
+            if "```json" in json_str:
+                json_str = json_str.split("```json")[1].split("```")[0].strip()
+            elif "```" in json_str:
+                json_str = json_str.split("```")[1].split("```")[0].strip()
+            result = _json.loads(json_str)
+            return result
+        except Exception:
+            # LLM 返回无法解析，标记为需要澄清
+            return {
+                "needs_clarification": True,
+                "missing_fields": ["full_rule"],
+                "clarification_question": f"我理解您的意思是：{response}。请确认或补充更多细节。",
+            }
 
     def _try_local_parse(self, text: str) -> dict | None:
         """尝试本地规则匹配（覆盖常见模式）"""
