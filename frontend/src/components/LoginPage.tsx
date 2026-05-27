@@ -29,37 +29,45 @@ export function LoginPage({ onLogin }: Props) {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-          <span className="logo">🏭</span>
+          <div className="login-logo">
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
+              <rect width="64" height="64" rx="12" fill="#1e293b"/>
+              <path d="M20 24h24v4H20zM20 32h16v4H20zM20 40h20v4H20z" fill="#60a5fa"/>
+              <circle cx="44" cy="38" r="8" fill="#a78bfa"/>
+            </svg>
+          </div>
           <h1>Agent APS</h1>
-          <p>基于 Agent 的认知型 APS 系统</p>
+          <p>请登录以继续</p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>👤 用户名</label>
+            <label>用户名</label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="请输入用户名"
               required
+              autoComplete="username"
             />
           </div>
 
           <div className="form-group">
-            <label>🔒 密码</label>
+            <label>密码</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="请输入密码"
               required
+              autoComplete="current-password"
             />
           </div>
 
-          {error && <div className="error-message">❌ {error}</div>}
+          {error && <div className="error-message">{error}</div>}
 
-          <button type="submit" disabled={loading} className="primary full-width">
-            {loading ? "登录中..." : "🚀 登录"}
+          <button type="submit" disabled={loading} className="btn-primary full-width">
+            {loading ? "登录中..." : "登录"}
           </button>
         </form>
 

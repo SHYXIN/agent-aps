@@ -18,7 +18,6 @@ function App() {
   const [selectedRule, setSelectedRule] = useState<import("./types/rule").Rule | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 检查是否已登录
   useEffect(() => {
     if (authApi.isAuthenticated()) {
       authApi.me().then((u) => {
@@ -66,7 +65,6 @@ function App() {
     setSelectedRule(null);
   };
 
-  // 未登录：落地页或登录页
   if (!user) {
     if (view === "login") {
       return <LoginPage onLogin={handleLogin} />;
@@ -74,37 +72,41 @@ function App() {
     return <LandingPage onGoToLogin={() => setView("login")} />;
   }
 
-  // 已登录：主应用
   return (
     <div className="app">
-      <header>
-        <div className="header-left">
-          <span className="header-icon">🏭</span>
-          <h1>Agent APS</h1>
+      <header className="app-header">
+        <div className="header-brand">
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+            <rect width="64" height="64" rx="12" fill="#1e293b"/>
+            <path d="M20 24h24v4H20zM20 32h16v4H20zM20 40h20v4H20z" fill="#60a5fa"/>
+            <circle cx="44" cy="38" r="8" fill="#a78bfa"/>
+          </svg>
+          <span className="brand-name">Agent APS</span>
         </div>
-        <nav>
-          {view === "list" && (
-            <>
-              <button className="primary" onClick={() => setView("create")}>
-                ➕ 新建规则
-              </button>
-              <button onClick={() => setView("chat")}>💬 Agent 对话</button>
-              <button onClick={() => setView("import")}>📁 批量导入</button>
-            </>
-          )}
-          {view !== "list" && (
-            <button onClick={handleCancel}>← 返回列表</button>
-          )}
+
+        <nav className="header-nav">
+          <button className={view === "list" ? "active" : ""} onClick={() => setView("list")}>
+            规则管理
+          </button>
+          <button className={view === "chat" ? "active" : ""} onClick={() => setView("chat")}>
+            Agent 对话
+          </button>
+          <button className={view === "import" ? "active" : ""} onClick={() => setView("import")}>
+            批量导入
+          </button>
+          <button className="btn-create" onClick={() => setView("create")}>
+            + 新建规则
+          </button>
         </nav>
-        <div className="header-right">
-          <span className="user-info">
-            👤 {user.username} {user.role === "admin" ? "🛡️" : ""}
-          </span>
-          <button onClick={handleLogout}>🚪 退出</button>
+
+        <div className="header-user">
+          <span className="user-name">{user.username}</span>
+          <span className="user-role">{user.role === "admin" ? "管理员" : "用户"}</span>
+          <button className="btn-logout" onClick={handleLogout}>退出</button>
         </div>
       </header>
 
-      <main>
+      <main className="app-main">
         {view === "list" && (
           <RuleList onEdit={handleEdit} onView={handleView} refreshKey={refreshKey} />
         )}
