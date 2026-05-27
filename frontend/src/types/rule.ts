@@ -36,3 +36,9 @@ export interface ConflictInfo {
   existing_rule: string;
   reason: string;
 }
+
+export interface User {
+  user_id: number;
+  username: string;
+  role: string;
+}
